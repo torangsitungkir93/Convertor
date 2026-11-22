@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ConverTor Beta v1.2</title>
+<style>
+  :root{
+    --boxh:380px;
+    --bg:#0b0b1a; --card:rgba(255,255,255,.06); --line:rgba(255,255,255,.12);
+    --txt:#eef0ff; --mute:#9aa0c8; --a:#7c5cff; --b:#00d4ff; --ok:#2ee59d; --bad:#ff5c7c;
+  }
+  *{box-sizing:border-box;margin:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
+  .bg{position:fixed;inset:0;z-index:-1;overflow:hidden}
+  .blob{position:absolute;border-radius:50%;filter:blur(80px);opacity:.45;animation:float 18s ease-in-out infinite;will-change:transform}
+  .blob.b1{width:480px;height:480px;background:var(--a);top:-120px;left:-100px}
+  .blob.b2{width:420px;height:420px;background:var(--b);bottom:-140px;right:-100px;animation-delay:-6s}
+  .blob.b3{width:320px;height:320px;background:#ff4fd8;top:40%;left:55%;animation-delay:-12s;opacity:.28}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(60px,40px) scale(1.15)}66%{transform:translate(-40px,70px) scale(.9)}}
+  .grid{position:absolute;inset:0;background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:48px 48px;opacity:.12;mask-image:radial-gradient(circle at 50% 30%,#000,transparent 75%)}
+  @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
+
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 18px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:26px;animation:down .7s cubic-bezier(.2,.9,.3,1) both}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo .lg{display:block;width:44px;height:44px;flex:none;filter:drop-shadow(0 0 14px rgba(124,92,255,.6));animation:pulse 3s infinite}
+  .logo .lg svg{width:100%;height:100%;display:block}
+  h1{font-size:1.5rem;letter-spacing:-.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  h1 span.g{background:linear-gradient(90deg,var(--a),var(--b));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .badge{font-size:.68rem;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(0,212,255,.15);border:1px solid rgba(0,212,255,.5);color:var(--b);letter-spacing:.03em}
+  .sub{color:var(--mute);font-size:.82rem}
+  @keyframes pulse{50%{filter:drop-shadow(0 0 24px rgba(0,212,255,.85))}}
+  @keyframes down{from{opacity:0;transform:translateY(-20px)}}
+  @keyframes up{from{opacity:0;transform:translateY(24px)}}
+
+  .status{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--mute);padding:8px 14px;border:1px solid var(--line);border-radius:99px;background:var(--card);backdrop-filter:blur(10px);transition:.25s}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--bad);box-shadow:0 0 10px var(--bad)}
+  .dot.wait{background:#ffb347;box-shadow:0 0 10px #ffb347;animation:blink 1s infinite}
+  #boot{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:var(--bg);transition:opacity .4s;padding:20px;text-align:center;color:var(--mute);font-size:.9rem}
+  #boot.hide{opacity:0;pointer-events:none}
+  .spin{width:42px;height:42px;border-radius:50%;border:4px solid rgba(255,255,255,.12);border-top-color:var(--b);animation:spin .9s linear infinite;margin:0 auto 14px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .dot.on{background:var(--ok);box-shadow:0 0 10px var(--ok);animation:blink 2s infinite}
+  @keyframes blink{50%{opacity:.4}}
+
+  .tabs{display:flex;gap:6px;padding:6px;background:var(--card);border:1px solid var(--line);border-radius:16px;backdrop-filter:blur(12px);position:relative}
+  #tabs{margin-bottom:20px;animation:up .7s .1s both}
+  #seg{margin-bottom:18px;background:rgba(0,0,0,.25)}
+  .tab{flex:1;padding:12px 8px;border:0;background:none;color:var(--mute);font-weight:600;font-size:.9rem;cursor:pointer;border-radius:11px;position:relative;z-index:1;transition:color .25s}
+  .tab.active{color:#fff}
+  .pill{position:absolute;top:6px;bottom:6px;border-radius:11px;background:linear-gradient(135deg,var(--a),#5b8cff);box-shadow:0 6px 24px rgba(124,92,255,.5);transition:all .4s cubic-bezier(.3,1.3,.4,1)}
+
+  .panel{display:none}
+  .panel.active{display:block;animation:up .5s both}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:22px;backdrop-filter:blur(14px);margin-bottom:18px;transition:border-color .3s}
+  .card:hover{border-color:rgba(124,92,255,.5)}
+  .card h3{font-size:1rem;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .split>.card{margin-bottom:0}
+  @media(max-width:820px){.split{grid-template-columns:1fr}}
+
+  .drop{border:2px dashed var(--line);border-radius:18px;padding:40px 20px;text-align:center;cursor:pointer;transition:.3s}
+  .drop:hover,.drop.over{border-color:var(--b);background:rgba(0,212,255,.07);transform:scale(1.01)}
+  .drop .ico{font-size:2.6rem;display:block;margin-bottom:8px;animation:bob 2.5s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(-8px)}}
+  .drop p{color:var(--mute);font-size:.9rem}
+  .drop b{color:var(--txt)}
+
+  textarea,input[type=text],input[type=password],input[type=number],select{width:100%;background:rgba(0,0,0,.35);border:1px solid var(--line);color:var(--txt);border-radius:12px;padding:11px 13px;font:inherit;font-size:.88rem;outline:none;transition:.25s}
+  select option{background:#12122a}
+  textarea{min-height:140px;resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:.76rem;word-break:break-all}
+  #b64out{height:var(--boxh);min-height:0;resize:none}
+  textarea:focus,input:focus,select:focus{border-color:var(--a);box-shadow:0 0 0 3px rgba(124,92,255,.25)}
+  textarea[readonly]{opacity:.9}
+  input[type=range]{width:100%;accent-color:var(--a)}
+
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  .row>.grow{flex:1;min-width:160px}
+  .btn{border:0;cursor:pointer;color:#fff;font-weight:600;font-size:.85rem;padding:11px 18px;border-radius:12px;background:linear-gradient(135deg,var(--a),#5b8cff);position:relative;overflow:hidden;transition:transform .2s,box-shadow .2s;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,92,255,.5)}
+  .btn:active{transform:scale(.96)}
+  .btn.big{font-size:1rem;padding:14px 30px;background:linear-gradient(135deg,#7c5cff,#00d4ff);box-shadow:0 8px 28px rgba(0,212,255,.3)}
+  .btn.alt{background:linear-gradient(135deg,#00b3d6,#00d4ff);color:#04202a}
+  .btn.ghost{background:var(--card);border:1px solid var(--line);color:var(--txt)}
+  .btn.danger{background:linear-gradient(135deg,#ff3d6b,#ff7a5c)}
+  .btn:disabled{opacity:.4;pointer-events:none}
+  .btn .rip{position:absolute;border-radius:50%;background:rgba(255,255,255,.5);transform:scale(0);animation:rip .6s linear;pointer-events:none}
+  @keyframes rip{to{transform:scale(4);opacity:0}}
+  label.chk{font-size:.82rem;color:var(--mute);display:flex;align-items:center;gap:6px;cursor:pointer}
+
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+  .tag{font-size:.74rem;padding:5px 11px;border-radius:99px;background:rgba(124,92,255,.18);border:1px solid rgba(124,92,255,.4);animation:pop .4s both}
+  @keyframes pop{from{transform:scale(.6);opacity:0}}
+
+  .opts{margin-top:16px;padding:16px;border-radius:16px;background:rgba(0,212,255,.05);border:1px solid rgba(0,212,255,.25);animation:zoom .4s both}
+  .opts h4{font-size:.9rem;margin-bottom:12px}
+  .optgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+  .optgrid label{font-size:.76rem;color:var(--mute);display:grid;gap:5px}
+  .opts .sub{margin-top:10px;font-size:.74rem}
+
+  .preview{--z:100;height:var(--boxh);margin-top:6px;border-radius:16px;background:rgba(0,0,0,.35);border:1px solid var(--line);overflow:auto;display:flex;animation:zoom .5s cubic-bezier(.2,.9,.3,1)}
+  .preview>*{margin:auto}
+  @keyframes zoom{from{opacity:0;transform:scale(.94)}}
+  /* isi preview pas di dalam kotak pada 100%, slider hanya mengubah ukuran isi (scroll di dalam kotak) */
+  .preview img,.preview video,.preview iframe{flex:none;width:calc(var(--z) * 1%);height:calc(var(--z) * 1%);max-width:none;object-fit:contain;display:block}
+  .preview iframe{border:0;background:#fff}
+  .preview audio{width:92%;margin:auto}
+  .preview pre{flex:none;width:100%;min-height:100%;box-sizing:border-box;padding:14px;font-size:calc(var(--z) * .0078rem);white-space:pre-wrap;word-break:break-word;margin:0}
+  #pvBody{--boxh:min(60vh,520px)}
+  #result{scroll-margin-top:12px}
+  .nofile{padding:30px;text-align:center;color:var(--mute)}
+  .nofile .big{font-size:2.6rem}
+  .zoom{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-top:12px;font-size:.8rem;color:var(--mute)}
+  .zoom b{color:var(--txt);min-width:44px;text-align:right}
+
+  .bar{height:6px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:14px;display:none}
+  .bar.show{display:block}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--a),var(--b),var(--a));background-size:200%;animation:slide 1.2s linear infinite;transition:width .25s}
+  @keyframes slide{to{background-position:200%}}
+
+  .list{display:grid;gap:12px}
+  .item{display:flex;align-items:center;gap:14px;padding:14px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line);animation:up .5s both;transition:.25s}
+  .item:hover{transform:translateX(6px);border-color:var(--b)}
+  .item .ic{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;font-size:1.4rem;background:linear-gradient(135deg,rgba(124,92,255,.3),rgba(0,212,255,.25));flex:none}
+  .item .info{flex:1;min-width:0}
+  .item .nm{font-weight:600;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .dt{font-size:.75rem;color:var(--mute);margin-top:3px}
+  .item .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .mini{border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--txt);border-radius:10px;padding:8px 11px;cursor:pointer;font-size:.8rem;transition:.2s}
+  .mini:hover{background:var(--a);transform:translateY(-2px)}
+  .mini.del:hover{background:var(--bad)}
+  .empty{text-align:center;padding:50px 10px;color:var(--mute)}
+  .skel{height:74px;border-radius:16px;background:linear-gradient(90deg,var(--card),rgba(255,255,255,.12),var(--card));background-size:200%;animation:slide 1.4s linear infinite}
+
+  .modal{position:fixed;inset:0;background:rgba(5,5,15,.75);backdrop-filter:blur(8px);display:none;place-items:center;z-index:50;padding:16px}
+  .modal.show{display:grid;animation:fade .25s}
+  #mCfm,#mPass{z-index:70}
+  @keyframes fade{from{opacity:0}}
+  .box{width:100%;max-width:680px;max-height:92vh;overflow:auto;background:#12122a;border:1px solid var(--line);border-radius:22px;padding:24px;animation:zoom .4s cubic-bezier(.2,.9,.3,1)}
+  .box h3{margin-bottom:6px;word-break:break-word}
+  .box p.hint{color:var(--mute);font-size:.8rem;margin-bottom:12px;line-height:1.5}
+  .box code{background:rgba(255,255,255,.08);padding:1px 6px;border-radius:6px;font-size:.78rem}
+
+  .toasts{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);display:grid;gap:8px;z-index:99;width:min(92vw,380px)}
+  .toast{padding:12px 16px;border-radius:14px;background:#1b1b3a;border:1px solid var(--line);font-size:.85rem;animation:toast .45s cubic-bezier(.2,1.3,.4,1) both;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  .toast.ok{border-color:var(--ok)}.toast.err{border-color:var(--bad)}
+  @keyframes toast{from{opacity:0;transform:translateY(30px) scale(.9)}}
+  @media(max-width:560px){.item{flex-wrap:wrap}.item .acts{width:100%;justify-content:flex-start}}
+
+  .totop{position:fixed;right:16px;bottom:calc(18px + env(safe-area-inset-bottom));z-index:40;width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:linear-gradient(135deg,var(--a),var(--b));display:grid;place-items:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.5);opacity:0;transform:translateY(16px) scale(.8);pointer-events:none;transition:opacity .3s,transform .3s}
+  .totop.show{opacity:1;transform:none;pointer-events:auto}
+  .totop.show:hover{transform:translateY(-3px)}
+  .totop:active{transform:scale(.92)}
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  /* modal konfirmasi */
+  .cfm-ico{font-size:2.2rem;margin-bottom:6px;text-align:center}
+  #mCfm .box{max-width:400px;text-align:center}
+  #mCfm p.hint{white-space:pre-line;word-break:break-word}
+
+  /* ===== Tampilan HP ===== */
+  html{-webkit-text-size-adjust:100%}
+  @media(max-width:600px){
+    .wrap{padding:16px 12px calc(60px + env(safe-area-inset-bottom))}
+    header{flex-direction:column;align-items:stretch;gap:12px;margin-bottom:18px}
+    .logo .lg{width:38px;height:38px}
+    h1{font-size:1.25rem}
+    header>div:last-child{justify-content:space-between!important;flex-wrap:nowrap!important}
+    .status{min-width:0;flex:1;font-size:.74rem;padding:7px 12px}
+    .status #stxt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #logout{flex:none}
+    .tabs{padding:4px;border-radius:14px}
+    .tab{padding:11px 4px;font-size:.8rem}
+    .pill{top:4px;bottom:4px}
+    .card{padding:14px;border-radius:16px;margin-bottom:14px}
+    .card h3{font-size:.95rem}
+    .split{gap:14px}
+    .drop{padding:26px 12px}
+    .drop .ico{font-size:2.1rem}
+    input[type=text],input[type=password],input[type=number],select,textarea{font-size:16px} /* cegah auto-zoom iOS */
+    textarea{min-height:110px;font-size:13px}
+    .row{gap:8px}
+    .row>.btn,.row>.grow{flex:1 1 calc(50% - 8px);min-width:0;justify-content:center}
+    .row>.grow{flex-basis:100%}
+    .btn{padding:12px 10px;font-size:.82rem}
+    .btn.big{width:100%;justify-content:center;padding:14px}
+    #convert{flex:1 1 100%}
+    .optgrid{grid-template-columns:1fr}
+    :root{--boxh:270px}
+    .zoom{grid-template-columns:auto 1fr auto;gap:8px;font-size:.74rem}
+    .meta{gap:6px}.tag{font-size:.7rem;padding:4px 9px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* daftar file */
+    .item{flex-wrap:wrap;padding:12px;gap:10px;align-items:flex-start}
+    .item:hover{transform:none}
+    .item .ic{width:40px;height:40px;font-size:1.2rem}
+    .item .info{flex:1 1 calc(100% - 60px)}
+    .item .nm{white-space:normal;word-break:break-word}
+    .item .acts{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .mini{padding:11px 8px;font-size:.8rem;text-align:center}
+    /* modal jadi bottom-sheet */
+    .modal{padding:0;place-items:end center}
+    .box{max-width:100%!important;border-radius:22px 22px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:94vh}
+    .modal .row>.btn{flex:1 1 calc(50% - 8px)}
+    .toasts{bottom:calc(14px + env(safe-area-inset-bottom))}
+  }
+  @media(max-width:360px){.tab{font-size:.74rem}h1{font-size:1.1rem}.badge{font-size:.6rem}}
+</style>
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js">
+<link rel="modulepreload" href="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js">
+</head>
+<body>
+<div id="boot"><div><div class="spin"></div><div id="bootTxt">Menghubungkan & memeriksa login…</div><button class="btn ghost" id="bootReload" style="display:none;margin:16px auto 0" onclick="location.reload()">🔄 Muat ulang</button></div></div>
+<div class="bg"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="grid"></div></div>
+
+<div class="wrap">
+  <header>
+    <div class="logo"><span class="lg" id="logoMark"></span><div>
+      <h1><span>Conver<span class="g">Tor</span></span><span class="badge">Beta v1.2</span></h1>
+      <div class="sub">File ⇄ Base64 ⇄ Cloud</div></div></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+      <div class="status" id="status" title="Info Firebase"><span class="dot wait" id="dot"></span><span id="stxt">Memeriksa login…</span></div>
+      <button class="mini" id="settingsBtn" style="display:none" title="Pengaturan admin">⚙️</button>
+      <button class="mini" id="logout" style="display:none">🚪 Keluar</button>
+    </div>
+  </header>
+
+  <div class="tabs" id="tabs">
+    <div class="pill"></div>
+    <button class="tab active" data-t="convert">⚡ Converter</button>
+    <button class="tab" data-t="library">☁️ Tersimpan</button>
+  </div>
+
+  <!-- CONVERTER -->
+  <section class="panel active" id="p-convert">
+    <div class="card">
+      <h3>1. Pilih sumber (salah satu)</h3>
+      <div class="tabs" id="seg">
+        <div class="pill"></div>
+        <button class="tab active" data-m="file">📁 Upload File</button>
+        <button class="tab" data-m="b64">🔤 Input Base64</button>
+      </div>
+
+      <div id="inFile">
+        <div class="drop" id="drop"><span class="ico">📁</span><p><b>Klik</b> atau seret file ke sini</p><input type="file" id="fileIn" hidden></div>
+        <div class="sub" id="maxHint" style="margin-top:8px;text-align:center"></div>
+        <div class="meta" id="fileTags"></div>
+      </div>
+
+      <div id="inB64" style="display:none">
+        <textarea id="b64in" placeholder="Tempel base64 di sini (boleh dengan prefix data:...)"></textarea>
+        <div class="row">
+          <div class="grow"><input type="text" id="fname" placeholder="Nama file hasil (opsional), mis. foto.png"></div>
+          <button class="btn ghost" id="loadTxt">📄 Muat dari .txt</button>
+          <button class="btn ghost" id="clearB64">🧹 Kosongkan</button>
+          <input type="file" id="txtIn" accept=".txt,text/plain" hidden>
+        </div>
+        <div class="sub" style="margin-top:8px">Base64 yang sangat besar? Pakai <b>Muat dari .txt</b> — jauh lebih ringan daripada menempel ke kotak teks.</div>
+        <div class="meta" id="b64Tags"></div>
+      </div>
+
+      <div class="opts" id="resOpts" style="display:none">
+        <h4>🖼️ Resolusi &amp; kualitas gambar</h4>
+        <div class="optgrid">
+          <label>Lebar maksimum
+            <select id="optW">
+              <option value="orig">Asli (tidak diubah)</option>
+              <option value="3840">3840 px (4K)</option><option value="1920">1920 px (Full HD)</option>
+              <option value="1280">1280 px (HD)</option><option value="1024">1024 px</option>
+              <option value="800">800 px</option><option value="640">640 px</option>
+              <option value="320">320 px</option><option value="custom">Kustom…</option>
+            </select></label>
+          <label id="optCW" style="display:none">Lebar kustom (px)<input type="number" id="optCustom" min="16" max="8000" value="1000"></label>
+          <label>Format
+            <select id="optF"><option value="orig">Asli</option><option value="image/jpeg">JPEG</option><option value="image/webp">WebP (paling kecil)</option></select></label>
+          <label>Kualitas: <b id="qv" style="color:var(--txt)">85%</b><input type="range" id="optQ" min="10" max="100" value="85"></label>
+        </div>
+        <div class="sub">Resolusi hanya bisa diperkecil, tidak diperbesar. Makin kecil, makin ringan base64-nya. Kualitas berlaku untuk JPEG/WebP.</div>
+      </div>
+
+      <div class="row" style="margin-top:20px">
+        <button class="btn big" id="convert" disabled>⚡ Convert</button>
+        <span class="sub" id="hint"></span>
+      </div>
+      <div class="bar" id="barC"><i></i></div>
+    </div>
+
+    <!-- HASIL: kiri base64, kanan preview -->
+    <div class="split" id="result" style="display:none">
+      <div class="card">
+        <h3>🔤 Base64</h3>
+        <textarea id="b64out" readonly></textarea>
+        <div class="row"><label class="chk"><input type="checkbox" id="withPrefix"> Sertakan prefix <code>data:...;base64,</code></label></div>
+        <div class="row">
+          <button class="btn ghost" id="copy1">📋 Salin</button>
+          <button class="btn ghost" id="dlTxt">📄 Unduh .txt</button>
+          <button class="btn ghost" id="showFull" style="display:none">👁 Tampilkan lengkap</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>🖼️ Preview</h3>
+        <div class="meta" id="meta" style="margin-top:0"></div>
+        <div class="preview" id="prev"></div>
+        <div class="zoom"><span>🔍 Ukuran</span><input type="range" id="zoom" min="25" max="300" value="100"><b id="zv">100%</b></div>
+        <div class="row">
+          <button class="btn alt" id="dlFile">⬇️ Download file</button>
+          <button class="btn" id="saveCloud">☁️ Simpan ke Firebase</button>
+        </div>
+        <div class="sub" id="saveNote" style="margin-top:12px"></div>
+        <div class="bar" id="barS"><i></i></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section class="panel" id="p-library">
+    <div class="row" style="margin:0 0 14px">
+      <button class="btn ghost" id="refresh">🔄 Muat ulang</button>
+      <span class="sub" id="count"></span>
+    </div>
+    <div class="list" id="list"></div>
+  </section>
+</div>
+
+<div class="modal" id="mPrev"><div class="box">
+  <h3 id="pvTitle">Preview</h3>
+  <div class="preview" id="pvBody"></div>
+  <div class="zoom"><span>🔍 Ukuran</span><input type="range" id="pvZoom" min="25" max="300" value="100"><b id="pvZv">100%</b></div>
+  <div class="row"><button class="btn alt" id="pvDl">⬇️ Download</button><button class="btn ghost" id="pvClose">Tutup</button></div>
+</div></div>
+
+<div class="modal" id="mLogin"><div class="box" style="max-width:400px;text-align:center">
+  <div style="font-size:2.4rem;margin-bottom:6px">🔐</div>
+  <h3>Masuk ke ConverTor</h3>
+  <p class="hint">Login diperlukan untuk menyimpan &amp; melihat file di Firebase.</p>
+  <div style="display:grid;gap:10px;text-align:left">
+    <input type="text" id="lgEmail" placeholder="Email" autocomplete="username" inputmode="email">
+    <input type="password" id="lgPass" placeholder="Password" autocomplete="current-password">
+    <div id="lgErr" style="color:var(--bad);font-size:.8rem;min-height:1.1em"></div>
+    <button class="btn big" id="lgBtn" style="justify-content:center">Masuk</button>
+  </div>
+</div></div>
+
+<div class="modal" id="mPass"><div class="box" style="max-width:400px;text-align:center">
+  <div style="font-size:2.2rem;margin-bottom:6px">🔑</div>
+  <h3 id="pwTitle">Password</h3>
+  <p class="hint" id="pwHint"></p>
+  <div style="display:grid;gap:10px;text-align:left">
+    <input type="password" id="pw1" placeholder="Password" autocomplete="off">
+    <input type="password" id="pw2" placeholder="Ulangi password" autocomplete="off" style="display:none">
+    <div id="pwErr" style="color:var(--bad);font-size:.8rem;min-height:1.1em"></div>
+    <div class="row" style="margin:0;justify-content:center"><button class="btn" id="pwOk">OK</button><button class="btn ghost" id="pwCancel">Batal</button></div>
+  </div>
+</div></div>
+
+<div class="modal" id="mCfm"><div class="box">
+  <div class="cfm-ico" id="cfmIco">⚠️</div>
+  <h3 id="cfmTitle" style="text-align:center">Konfirmasi</h3>
+  <p class="hint" id="cfmMsg" style="text-align:center"></p>
+  <div class="row" style="justify-content:center"><button class="btn danger" id="cfmOk">OK</button><button class="btn ghost" id="cfmCancel">Batal</button></div>
+</div></div>
+
+<button class="totop" id="toTop" title="Kembali ke atas (upload file)" aria-label="Kembali ke atas"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 19V5M5 12l7-7 7 7" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
+<div class="modal" id="mSet"><div class="box" style="max-width:420px">
+  <div class="cfm-ico">⚙️</div>
+  <h3 style="text-align:center">Pengaturan Admin</h3>
+  <p class="hint" style="text-align:center">Atur ukuran maksimum file yang bisa diupload oleh <b>semua user</b> (maks 100 MB). Berlaku untuk file yang dipilih maupun base64 yang dimasukkan.</p>
+  <label style="display:grid;gap:6px;font-size:.8rem;color:var(--mute)">Ukuran maksimum per file (MB)
+    <input type="number" id="setMax" min="1" max="100" step="1" inputmode="decimal"></label>
+  <div class="presets"><button class="mini" data-mb="5">5 MB</button><button class="mini" data-mb="10">10 MB</button><button class="mini" data-mb="25">25 MB</button><button class="mini" data-mb="50">50 MB</button></div>
+  <div id="setErr" style="color:var(--bad);font-size:.8rem;min-height:1.2em;margin-top:8px"></div>
+  <div class="row" style="justify-content:center"><button class="btn" id="setSave">💾 Simpan</button><button class="btn ghost" id="setCancel">Batal</button></div>
+</div></div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+setTimeout(function(){
+  if(window.__authReady)return;
+  document.getElementById('bootTxt').textContent='Koneksi lambat atau Firebase gagal dimuat. Periksa internet lalu muat ulang.';
+  document.querySelector('#boot .spin').style.display='none';
+  document.getElementById('bootReload').style.display='inline-flex';
+},12000);
+</script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDocs, getDoc, deleteDoc, writeBatch, query, orderBy, serverTimestamp, Timestamp, where }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged }
+  from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+const $ = s => document.querySelector(s);
+
+const CHUNK = 400000;            // karakter per dokumen Firestore (batas 1 MiB)
+let maxBytes = 25*1024*1024;     // batas file (admin bisa mengubahnya)
+const LIMIT = 20000;             // karakter base64 yang ditampilkan di kotak teks (agar ringan)
+let db=null, mode='file', srcFile=null, b64Src='', fromTxt=false, result=null, curUrl=null, showFull=false, pvState=null;
+
+/* ---------- utils ---------- */
+const fmt = n => n<1024? n+' B' : n<1048576? (n/1024).toFixed(1)+' KB' : (n/1048576).toFixed(2)+' MB';
+const paint = () => new Promise(r=>requestAnimationFrame(()=>setTimeout(r,30)));
+function toast(msg,type='ok'){const t=document.createElement('div');t.className='toast '+type;t.textContent=msg;$('#toasts').appendChild(t);setTimeout(()=>{t.style.transition='.4s';t.style.opacity=0;t.style.transform='translateY(20px)';setTimeout(()=>t.remove(),400)},2800)}
+function icon(m=''){ if(m.startsWith('image/'))return'🖼️'; if(m.startsWith('video/'))return'🎬'; if(m.startsWith('audio/'))return'🎵'; if(m==='application/pdf')return'📕'; if(m.startsWith('text/')||m.includes('json'))return'📝'; if(m.includes('zip'))return'🗜️'; return'📄'}
+const EXT={'image/png':'png','image/jpeg':'jpg','image/gif':'gif','image/webp':'webp','image/svg+xml':'svg','application/pdf':'pdf','audio/mpeg':'mp3','audio/wav':'wav','audio/ogg':'ogg','video/mp4':'mp4','video/webm':'webm','application/zip':'zip','text/plain':'txt','application/json':'json','text/html':'html','text/csv':'csv'};
+const defName=m=>'file-'+Date.now().toString(36)+'.'+(EXT[m]||'bin');
+const swapExt=(n,m)=>n.replace(/\.[^.]+$/,'')+'.'+(EXT[m]||'bin');
+function ripple(e){const b=e.currentTarget,r=document.createElement('span'),d=Math.max(b.offsetWidth,b.offsetHeight),rc=b.getBoundingClientRect();r.className='rip';r.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-rc.left-d/2}px;top:${e.clientY-rc.top-d/2}px`;b.appendChild(r);setTimeout(()=>r.remove(),600)}
+document.addEventListener('click',e=>{const b=e.target.closest('.btn');if(b)ripple({currentTarget:b,clientX:e.clientX,clientY:e.clientY})});
+const setBar=(id,p)=>{const b=$(id);if(p==null){b.classList.remove('show');return}b.classList.add('show');b.firstElementChild.style.width=(p*100)+'%'};
+const tags=(el,arr)=>{el.innerHTML=arr.map((t,i)=>`<span class="tag" style="animation-delay:${i*.07}s">${t}</span>`).join('')};
+const addTag=(el,t)=>{const s=document.createElement('span');s.className='tag';s.textContent=t;el.appendChild(s)};
+function download(blob,name){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),3000)}
+const resizable=m=>/^image\/(png|jpe?g|webp|bmp|avif)$/.test(m||'');
+
+/* ---------- base64 helpers ---------- */
+function sniffMime(b64){
+  let h;try{h=atob(b64.slice(0,48))}catch{return null}
+  const hex=[...h].map(c=>c.charCodeAt(0).toString(16).padStart(2,'0')).join(''),a=h.slice(0,12);
+  if(hex.startsWith('89504e47'))return'image/png';
+  if(hex.startsWith('ffd8ff'))return'image/jpeg';
+  if(a.startsWith('GIF8'))return'image/gif';
+  if(a.startsWith('%PDF'))return'application/pdf';
+  if(a.startsWith('RIFF')&&h.slice(8,12)==='WEBP')return'image/webp';
+  if(a.startsWith('RIFF')&&h.slice(8,12)==='WAVE')return'audio/wav';
+  if(hex.startsWith('504b0304'))return'application/zip';
+  if(a.startsWith('ID3')||hex.startsWith('fffb'))return'audio/mpeg';
+  if(a.startsWith('OggS'))return'audio/ogg';
+  if(hex.startsWith('1a45dfa3'))return'video/webm';
+  if(h.slice(4,8)==='ftyp')return'video/mp4';
+  const t=h.trimStart().toLowerCase();
+  if(t.startsWith('<svg')||t.startsWith('<?xml'))return'image/svg+xml';
+  if(t.startsWith('{')||t.startsWith('['))return'application/json';
+  if(/^[\x09\x0a\x0d\x20-\x7e]+$/.test(h))return'text/plain';
+  return null;
+}
+function detectHead(src){ // murah: hanya baca 400 karakter pertama
+  const head=src.slice(0,400), m=head.match(/^\s*data:([^;,]*)/i);
+  if(m&&m[1])return m[1];
+  let h=head.replace(/^\s*data:[^,]*,/i,'').replace(/\s+/g,'').replace(/-/g,'+').replace(/_/g,'/');
+  return sniffMime(h);
+}
+function parseB64(raw){
+  raw=(raw||'').trim(); let mime=null;
+  const m=raw.match(/^data:([^;,]*)(;[^,]*)?,/i);
+  if(m){mime=m[1]||null;raw=raw.slice(m[0].length)}
+  raw=raw.replace(/\s+/g,'');
+  if(/[-_]/.test(raw))raw=raw.replace(/-/g,'+').replace(/_/g,'/');
+  if(!raw||/[^A-Za-z0-9+/=]/.test(raw))return null;
+  while(raw.endsWith('='))raw=raw.slice(0,-1);
+  while(raw.length%4)raw+='=';
+  if(!mime)mime=sniffMime(raw)||'application/octet-stream';
+  return {b64:raw,mime};
+}
+async function b64ToBlob(b64,mime){return await (await fetch(`data:${mime};base64,${b64}`)).blob()}
+function blobToB64(blob,onp){return new Promise((res,rej)=>{
+  const r=new FileReader();
+  r.onprogress=e=>e.lengthComputable&&onp&&onp(e.loaded/e.total);
+  r.onerror=()=>rej(r.error);
+  r.onload=()=>{const s=r.result;res(s.slice(s.indexOf(',')+1))};
+  r.readAsDataURL(blob);
+})}
+
+/* ---------- resize gambar ---------- */
+async function loadBitmap(blob){
+  try{return await createImageBitmap(blob)}catch{
+    return await new Promise((res,rej)=>{const i=new Image(),u=URL.createObjectURL(blob);i.onload=()=>{URL.revokeObjectURL(u);res(i)};i.onerror=()=>rej(new Error('Gambar tidak bisa dibaca'));i.src=u});
+  }
+}
+async function resizeImage(blob,o){
+  const bmp=await loadBitmap(blob);
+  const ow=bmp.naturalWidth||bmp.width, oh=bmp.naturalHeight||bmp.height;
+  const tw=o.width?Math.min(o.width,ow):ow, th=Math.max(1,Math.round(oh*tw/ow));
+  const c=document.createElement('canvas');c.width=tw;c.height=th;
+  const ctx=c.getContext('2d');
+  const outType=o.type||(['image/png','image/jpeg','image/webp'].includes(blob.type)?blob.type:'image/png');
+  if(outType==='image/jpeg'){ctx.fillStyle='#fff';ctx.fillRect(0,0,tw,th)}
+  ctx.imageSmoothingQuality='high';
+  ctx.drawImage(bmp,0,0,tw,th); bmp.close?.();
+  const out=await new Promise(r=>c.toBlob(r,outType,o.quality));
+  c.width=c.height=0; // lepas memori canvas
+  if(!out)throw new Error('Gagal memproses gambar');
+  return out;
+}
+function readOpts(){
+  const w=$('#optW').value,f=$('#optF').value;
+  const width=w==='orig'?null:(w==='custom'?Math.max(16,+$('#optCustom').value||0):+w);
+  return {active:!!width||f!=='orig',width,type:f==='orig'?null:f,quality:(+$('#optQ').value)/100};
+}
+$('#optW').onchange=()=>{$('#optCW').style.display=$('#optW').value==='custom'?'':'none'};
+$('#optQ').oninput=()=>{$('#qv').textContent=$('#optQ').value+'%'};
+
+/* ---------- preview ---------- */
+async function renderPreview(el,blob,mime,name,onDims){
+  el.innerHTML='';
+  const url=URL.createObjectURL(blob);
+  let n;
+  if(mime.startsWith('image/')){n=new Image();n.alt=name;n.onload=()=>onDims&&onDims(n.naturalWidth,n.naturalHeight);n.src=url}
+  else if(mime.startsWith('video/')){n=document.createElement('video');n.src=url;n.controls=true;n.preload='metadata'}
+  else if(mime.startsWith('audio/')){n=document.createElement('audio');n.src=url;n.controls=true}
+  else if(mime==='application/pdf'){n=document.createElement('iframe');n.src=url}
+  else if(mime.startsWith('text/')||mime.includes('json')){n=document.createElement('pre');n.textContent=(await blob.slice(0,8000).text())+(blob.size>8000?'\n…':'')}
+  else{n=document.createElement('div');n.className='nofile';n.innerHTML=`<div class="big">${icon(mime)}</div><div>${mime}</div><div class="sub">Tidak ada preview untuk tipe ini — tetap bisa di-download.</div>`}
+  el.appendChild(n);
+  return url;
+}
+function bindZoom(slider,label,target){slider.oninput=()=>{target.style.setProperty('--z',slider.value);label.textContent=slider.value+'%'}}
+bindZoom($('#zoom'),$('#zv'),$('#prev'));
+bindZoom($('#pvZoom'),$('#pvZv'),$('#pvBody'));
+
+/* ---------- tabs & pill ---------- */
+function movePill(c){const a=c.querySelector('.tab.active'),p=c.querySelector('.pill');if(!a||!a.offsetWidth)return;p.style.left=a.offsetLeft+'px';p.style.width=a.offsetWidth+'px'}
+const placeAll=()=>{movePill($('#tabs'));movePill($('#seg'))};
+addEventListener('resize',placeAll); requestAnimationFrame(placeAll);
+document.querySelectorAll('#tabs .tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.toggle('active',x===t));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id==='p-'+t.dataset.t));
+  placeAll(); if(t.dataset.t==='library')loadList(); else requestAnimationFrame(placeAll);
+});
+
+/* ---------- mode: file ATAU base64 ---------- */
+document.querySelectorAll('#seg .tab').forEach(t=>t.onclick=()=>setMode(t.dataset.m));
+function setMode(m){
+  mode=m;
+  document.querySelectorAll('#seg .tab').forEach(x=>x.classList.toggle('active',x.dataset.m===m));
+  movePill($('#seg'));
+  $('#inFile').style.display=m==='file'?'':'none';
+  $('#inB64').style.display=m==='b64'?'':'none';
+  // mode lain dikosongkan: tidak bisa keduanya
+  if(m==='file'){clearB64()}else{srcFile=null;$('#fileIn').value='';$('#fileTags').innerHTML=''; $('#drop').querySelector('p').innerHTML='<b>Klik</b> atau seret file ke sini'}
+  resetResult(); updateInputState();
+}
+function updateInputState(){
+  const mime=mode==='file'?(srcFile&&srcFile.type):(b64Src?detectHead(b64Src):null);
+  $('#resOpts').style.display=resizable(mime)?'':'none';
+  const ready=mode==='file'?!!srcFile:b64Src.trim().length>0;
+  $('#convert').disabled=!ready;
+  $('#hint').textContent=ready?'':(mode==='file'?'Pilih file dulu':'Isi base64 dulu');
+  if(mode==='b64'){ tags($('#b64Tags'),ready?[`${icon(mime||'')} terdeteksi: ${mime||'tidak diketahui'}`,`panjang: ${b64Src.length.toLocaleString('id-ID')} karakter`]:[]) }
+}
+function resetResult(){
+  $('#result').style.display='none'; result=null;
+  if(curUrl){URL.revokeObjectURL(curUrl);curUrl=null}
+  $('#prev').innerHTML=''; $('#b64out').value='';
+}
+
+/* input: file */
+const drop=$('#drop'),fileIn=$('#fileIn');
+drop.onclick=()=>fileIn.click();
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over')}));
+drop.addEventListener('drop',e=>pickFile(e.dataTransfer.files[0]));
+fileIn.onchange=()=>pickFile(fileIn.files[0]);
+function pickFile(f){
+  if(!f)return;
+  if(f.size>maxBytes){toast(`File terlalu besar (maks ${fmt(maxBytes)} — diatur admin)`,'err');return}
+  srcFile=f; resetResult();
+  drop.querySelector('p').innerHTML=`<b>${f.name.replace(/</g,'&lt;')}</b><br>klik untuk ganti`;
+  tags($('#fileTags'),[`${icon(f.type)} ${f.type||'tipe tidak diketahui'}`,fmt(f.size)]);
+  updateInputState();
+}
+
+/* input: base64 */
+const ta=$('#b64in'); let tIn;
+ta.addEventListener('input',()=>{ if(fromTxt)return; clearTimeout(tIn); tIn=setTimeout(()=>{b64Src=ta.value;resetResult();updateInputState()},300) });
+$('#loadTxt').onclick=()=>$('#txtIn').click();
+$('#txtIn').onchange=async()=>{
+  const f=$('#txtIn').files[0]; if(!f)return;
+  if(f.size>maxBytes*1.4){toast('File .txt terlalu besar','err');return}
+  b64Src=await f.text(); fromTxt=true; ta.readOnly=true;
+  ta.value=`📄 ${f.name} dimuat (${fmt(f.size)}).\nIsi tidak ditampilkan penuh agar ringan.\n\n`+b64Src.slice(0,600)+'…';
+  $('#txtIn').value=''; resetResult(); updateInputState();
+};
+function clearB64(){clearTimeout(tIn);b64Src='';fromTxt=false;ta.readOnly=false;ta.value='';$('#fname').value='';$('#b64Tags').innerHTML=''}
+$('#clearB64').onclick=()=>{clearB64();resetResult();updateInputState()};
+
+/* ---------- CONVERT ---------- */
+$('#convert').onclick=async()=>{
+  const btn=$('#convert'),old=btn.innerHTML;
+  btn.disabled=true;btn.innerHTML='⏳ Memproses…';setBar('#barC',.08);resetResult();await paint();
+  try{
+    let blob,mime,name,b64=null; const o=readOpts();
+    if(mode==='file'){
+      if(!srcFile)throw new Error('Pilih file dulu');
+      blob=srcFile;mime=srcFile.type||'application/octet-stream';name=srcFile.name;
+    }else{
+      const p=parseB64(b64Src); if(!p)throw new Error('Base64 tidak valid');
+      if(Math.floor(p.b64.length*3/4)>maxBytes)throw new Error(`Base64 terlalu besar (maks ${fmt(maxBytes)} — diatur admin)`);
+      mime=p.mime;b64=p.b64;name=$('#fname').value.trim()||defName(mime);
+      setBar('#barC',.25); blob=await b64ToBlob(b64,mime);
+    }
+    const srcSize=blob.size;
+    if(resizable(mime)&&o.active){
+      setBar('#barC',.4);await paint();
+      blob=await resizeImage(blob,o);
+      if(blob.type!==mime){mime=blob.type;name=swapExt(name,mime)}
+      b64=null;
+    }
+    if(!b64){setBar('#barC',.55);b64=await blobToB64(blob,p=>setBar('#barC',.55+p*.45))}
+    result={name,mime,size:blob.size,srcSize,b64,blob};
+    await showResult();
+    toast('Convert selesai ⚡');
+  }catch(e){toast(e.message||'Gagal convert','err')}
+  setBar('#barC',null);btn.innerHTML=old;updateInputState();
+};
+
+async function showResult(){
+  const R=$('#result');R.style.display='grid';R.style.animation='none';void R.offsetWidth;R.style.animation='up .5s both';
+  const t=[`${icon(result.mime)} ${result.name}`,result.mime,fmt(result.size)];
+  if(result.srcSize!==result.size)t.push(`dari ${fmt(result.srcSize)} → ${fmt(result.size)}`);
+  t.push(`Base64: ${fmt(result.b64.length)}`);
+  tags($('#meta'),t);
+  showFull=false;renderOut();
+  $('#zoom').value=100;$('#zoom').oninput();
+  if(curUrl)URL.revokeObjectURL(curUrl);
+  curUrl=await renderPreview($('#prev'),result.blob,result.mime,result.name,(w,h)=>addTag($('#meta'),`${w}×${h} px`));
+  requestAnimationFrame(()=>R.scrollIntoView({behavior:'smooth',block:'start'}));
+}
+const prefixStr=()=>$('#withPrefix').checked?`data:${result.mime};base64,`:'';
+function renderOut(){
+  if(!result)return;
+  const b=result.b64,pre=prefixStr(),big=b.length>LIMIT;
+  $('#b64out').value=(showFull||!big)?pre+b:pre+b.slice(0,LIMIT)+`\n\n… ${(b.length-LIMIT).toLocaleString('id-ID')} karakter lagi disembunyikan agar aplikasi tetap ringan.\nGunakan Salin / Unduh .txt untuk data lengkap.`;
+  $('#showFull').style.display=big?'':'none';
+  $('#showFull').textContent=showFull?'🙈 Ringkas':'👁 Tampilkan lengkap';
+}
+$('#withPrefix').onchange=renderOut;
+$('#showFull').onclick=async()=>{
+  if(!showFull&&result.b64.length>2e6&&!await askConfirm({title:'Teks sangat panjang',msg:'Menampilkan seluruh teks bisa membuat browser terasa lambat. Lanjut?',ok:'Tampilkan',icon:'🐢',danger:false}))return;
+  showFull=!showFull;$('#showFull').disabled=true;await paint();renderOut();$('#showFull').disabled=false;
+};
+$('#copy1').onclick=async()=>{
+  if(!result)return;const s=prefixStr()+result.b64;
+  try{await navigator.clipboard.writeText(s);toast('Base64 disalin ✨')}catch{toast('Gagal menyalin — pakai Unduh .txt','err')}
+};
+$('#dlTxt').onclick=()=>{if(!result)return;download(new Blob([prefixStr(),result.b64],{type:'text/plain'}),result.name.replace(/\.[^.]+$/,'')+'.base64.txt');toast('Diunduh 📄')};
+$('#dlFile').onclick=()=>{if(!result)return;download(result.blob,result.name);toast('File di-download 🎉')};
+$('#saveCloud').onclick=()=>result&&saveToCloud(result,'#barS','#saveCloud');
+
+/* ---------- Firebase ---------- */
+let auth=null;
+function connect(cfg){
+  try{
+    const app=initializeApp(cfg);db=getFirestore(app);
+    auth=getAuth(app);
+    onAuthStateChanged(auth,u=>{
+      window.__authReady=true;$('#dot').classList.remove('wait');
+      const bt=$('#boot');if(bt){bt.classList.add('hide');setTimeout(()=>bt.remove(),500)}
+      if(u){
+        $('#mLogin').classList.remove('show');
+        $('#dot').classList.add('on');$('#stxt').textContent='Login: '+u.email;$('#logout').style.display='';
+        applyRole();loadSettings();
+        sweepExpired().then(()=>{if($('#p-library').classList.contains('active'))loadList()});
+      }else{
+        $('#dot').classList.remove('on');$('#stxt').textContent='Belum login';$('#logout').style.display='none';
+        $('#list').innerHTML='';$('#count').textContent='';applyRole();
+        $('#mLogin').classList.add('show');
+      }
+    });
+    return true;
+  }catch(e){db=null;window.__authReady=true;$('#boot')?.remove();$('#dot').classList.remove('on','wait');$('#stxt').textContent='Gagal terhubung';toast('Config Firebase tidak valid','err');return false}
+}
+// Config Firebase ditanam langsung di sini (tidak perlu dimasukkan lewat web)
+const firebaseConfig = {
+  apiKey: "AIzaSyCh2Q0lFXcmzD9Ss4iDJ7lzfvv0tS-Mzsw",
+  authDomain: "convertor-myapp.firebaseapp.com",
+  projectId: "convertor-myapp",
+  storageBucket: "convertor-myapp.firebasestorage.app",
+  messagingSenderId: "494341714123",
+  appId: "1:494341714123:web:2948ebffe90cc4405a2b4e"
+};
+connect(firebaseConfig);
+const needDb=()=>{if(!db||!auth?.currentUser){toast('Login dulu untuk memakai Firebase','err');$('#mLogin').classList.add('show');return false}return true};
+
+/* ---------- Login (Email/Password) ---------- */
+async function doLogin(){
+  const em=$('#lgEmail').value.trim(),pw=$('#lgPass').value;
+  if(!em||!pw){$('#lgErr').textContent='Isi email dan password';return}
+  const b=$('#lgBtn');b.disabled=true;b.textContent='⏳ Masuk…';$('#lgErr').textContent='';
+  try{await signInWithEmailAndPassword(auth,em,pw);$('#lgPass').value=''}
+  catch(e){
+    const m={'auth/invalid-credential':'Email atau password salah','auth/invalid-email':'Format email tidak valid','auth/too-many-requests':'Terlalu banyak percobaan, coba lagi nanti','auth/network-request-failed':'Tidak ada koneksi internet','auth/operation-not-allowed':'Email/Password belum diaktifkan di Firebase Authentication'};
+    $('#lgErr').textContent=m[e.code]||('Gagal login: '+(e.code||e.message));
+  }
+  b.disabled=false;b.textContent='Masuk';
+}
+$('#lgBtn').onclick=doLogin;
+['#lgEmail','#lgPass'].forEach(s=>$(s).addEventListener('keydown',e=>{if(e.key==='Enter')doLogin()}));
+$('#logout').onclick=async()=>{await signOut(auth);toast('Berhasil keluar 👋')};
+
+/* ---------- Enkripsi (password per file) ---------- */
+const ADMIN_EMAIL='torangyps93@gmail.com';   // tanpa password & tidak kedaluwarsa
+const EXPIRE_DAYS=7;                          // user lain: file dihapus otomatis setelah 7 hari
+const isAdmin=()=>(auth?.currentUser?.email||'').toLowerCase()===ADMIN_EMAIL;
+const fmtDay=ms=>new Date(ms).toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+function applyRole(){
+  $('#settingsBtn').style.display=isAdmin()?'':'none';
+  const n=$('#saveNote');if(!n)return;
+  n.innerHTML=!auth?.currentUser?'':isAdmin()
+    ?'👑 Akun admin: file disimpan <b>tanpa password</b> dan <b>tidak kedaluwarsa</b>.'
+    :`🔒 Saat menyimpan, kamu membuat <b>password</b> (wajib untuk preview, download, salin, hapus). File otomatis <b>dihapus dalam ${EXPIRE_DAYS} hari</b>.`;
+}
+const enc=new TextEncoder();
+async function deriveKey(pw,salt){
+  const km=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveKey']);
+  return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:200000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+}
+const u8ToB64=u8=>blobToB64(new Blob([u8]));
+const b64ToU8=async b64=>new Uint8Array(await (await b64ToBlob(b64,'application/octet-stream')).arrayBuffer());
+async function encryptBlob(blob,pw){
+  const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),ivc=crypto.getRandomValues(new Uint8Array(12));
+  const key=await deriveKey(pw,salt);
+  const ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,await blob.arrayBuffer()));
+  const chk=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv:ivc},key,enc.encode('convertor-ok')));
+  return {b64:await u8ToB64(ct),salt:await u8ToB64(salt),iv:await u8ToB64(iv),chkIv:await u8ToB64(ivc),chk:await u8ToB64(chk)};
+}
+async function verifyPw(f,pw){ // kembalikan key jika password benar, selain itu null
+  try{
+    const key=await deriveKey(pw,await b64ToU8(f.salt));
+    const t=await crypto.subtle.decrypt({name:'AES-GCM',iv:await b64ToU8(f.chkIv)},key,await b64ToU8(f.chk));
+    return new TextDecoder().decode(t)==='convertor-ok'?key:null;
+  }catch{return null}
+}
+async function decryptToBlob(f,key,b64){
+  const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:await b64ToU8(f.iv)},key,await b64ToU8(b64));
+  return new Blob([pt],{type:f.mime});
+}
+
+function askConfirm({title='Konfirmasi',msg='',ok='OK',icon='⚠️',danger=true}){
+  return new Promise(res=>{
+    const m=$('#mCfm'),okb=$('#cfmOk');
+    $('#cfmTitle').textContent=title;$('#cfmMsg').textContent=msg;$('#cfmIco').textContent=icon;
+    okb.textContent=ok;okb.className='btn'+(danger?' danger':'');
+    m.classList.add('show');setTimeout(()=>okb.focus(),60);
+    const done=v=>{m.classList.remove('show');okb.onclick=$('#cfmCancel').onclick=null;document.removeEventListener('keydown',kd);res(v)};
+    const kd=e=>{if(e.key==='Escape')done(false)};
+    document.addEventListener('keydown',kd);
+    okb.onclick=()=>done(true);$('#cfmCancel').onclick=()=>done(false);
+    m.onclick=e=>{if(e.target===m)done(false)};
+  });
+}
+function askPassword({title,hint='',twice=false}){
+  return new Promise(res=>{
+    const m=$('#mPass'),p1=$('#pw1'),p2=$('#pw2'),err=$('#pwErr');
+    $('#pwTitle').textContent=title;$('#pwHint').textContent=hint;
+    p1.value='';p2.value='';p2.style.display=twice?'':'none';err.textContent='';
+    m.classList.add('show');setTimeout(()=>p1.focus(),60);
+    const done=v=>{m.classList.remove('show');$('#pwOk').onclick=$('#pwCancel').onclick=p1.onkeydown=p2.onkeydown=null;p1.value=p2.value='';res(v)};
+    const ok=()=>{
+      if(!p1.value){err.textContent='Password tidak boleh kosong';return}
+      if(twice){
+        if(p1.value.length<4){err.textContent='Minimal 4 karakter';return}
+        if(p1.value!==p2.value){err.textContent='Konfirmasi password tidak sama';return}
+      }
+      done(p1.value);
+    };
+    $('#pwOk').onclick=ok;$('#pwCancel').onclick=()=>done(null);
+    const kd=e=>{if(e.key==='Enter')ok();if(e.key==='Escape')done(null)};
+    p1.onkeydown=p2.onkeydown=kd;
+  });
+}
+
+async function deleteFileDoc(id){
+  const chunksRef=collection(db,'files',id,'chunks'),docRef=doc(db,'files',id);
+  for(let round=0;round<5;round++){
+    const snap=await getDocs(chunksRef);
+    for(let i=0;i<snap.docs.length;i+=100){const b=writeBatch(db);snap.docs.slice(i,i+100).forEach(d=>b.delete(d.ref));await b.commit()}
+    await deleteDoc(docRef);
+    // verifikasi ke server: potongan harus kosong & dokumen harus hilang
+    const [left,still]=await Promise.all([getDocs(chunksRef),getDoc(docRef)]);
+    if(left.empty&&!still.exists())return;
+  }
+  throw new Error('Data masih tersisa di Firebase setelah dihapus — cek Firestore Rules (izin delete)');
+}
+// Hapus file yang sudah lewat 7 hari (dokumen + semua potongan base64) saat login
+async function sweepExpired(){
+  try{
+    const all=await getDocs(query(collection(db,'files'),where('owner','==',auth.currentUser.uid))),now=Date.now();
+    const exp=all.docs.filter(d=>{const e=d.data().expireAt;return e&&e.toMillis()<=now});
+    for(const d of exp){try{await deleteFileDoc(d.id)}catch{}}
+    if(exp.length)toast(`${exp.length} file kedaluwarsa dihapus dari Firebase 🧹`);
+  }catch{}
+}
+async function saveToCloud(f,barId,btnId){
+  if(!needDb())return;
+  if(f.size>maxBytes){toast(`File melebihi batas ${fmt(maxBytes)} yang diatur admin`,'err');return}
+  const admin=isAdmin();
+  let pw=null;
+  if(!admin){
+    if(!window.crypto?.subtle){toast('Enkripsi tidak didukung di sini. Buka lewat https:// atau localhost','err');return}
+    pw=await askPassword({title:'🔒 Buat password file',twice:true,hint:`Password ini wajib untuk preview, download, salin, dan hapus file. Jika lupa, file tidak bisa dibuka lagi. File akan dihapus otomatis pada ${fmtDay(Date.now()+EXPIRE_DAYS*864e5)} (${EXPIRE_DAYS} hari lagi).`});
+    if(pw==null){toast('Penyimpanan dibatalkan');return}
+  }
+  const btn=$(btnId);btn.disabled=true;
+  try{
+    setBar(barId,.03);await paint();
+    let payload,meta={};
+    if(admin){payload=f.b64}
+    else{
+      const e=await encryptBlob(f.blob,pw);
+      payload=e.b64;
+      meta={enc:1,salt:e.salt,iv:e.iv,chkIv:e.chkIv,chk:e.chk,expireAt:Timestamp.fromMillis(Date.now()+EXPIRE_DAYS*864e5)};
+    }
+    const parts=Math.ceil(payload.length/CHUNK);
+    const ref=doc(collection(db,'files'));
+    for(let i=0;i<parts;i++){
+      const c={i,data:payload.slice(i*CHUNK,(i+1)*CHUNK)};
+      if(meta.expireAt)c.expireAt=meta.expireAt; // agar TTL Firestore ikut menghapus potongan
+      await setDoc(doc(db,'files',ref.id,'chunks',String(i).padStart(5,'0')),c);
+      setBar(barId,.1+(i+1)/(parts+1)*.9);
+    }
+    await setDoc(ref,{name:f.name,mime:f.mime,size:f.size,chunks:parts,createdAt:serverTimestamp(),owner:auth.currentUser.uid,ownerEmail:auth.currentUser.email,...meta});
+    setBar(barId,1);setTimeout(()=>setBar(barId,null),600);
+    toast(admin?'Tersimpan di Firebase ☁️✅':`Tersimpan & terkunci 🔒 — dihapus otomatis ${fmtDay(meta.expireAt.toMillis())}`);
+  }catch(err){setBar(barId,null);toast('Gagal menyimpan: '+(err.code||err.message),'err')}
+  btn.disabled=false;
+}
+async function fetchB64(id,chunks){
+  const snap=await getDocs(query(collection(db,'files',id,'chunks'),orderBy('i')));
+  if(snap.size!==chunks)throw new Error('Data tidak lengkap');
+  return snap.docs.map(d=>d.data().data).join('');
+}
+
+/* ---------- Library ---------- */
+async function loadList(){
+  const L=$('#list');
+  if(!db||!auth?.currentUser){L.innerHTML='<div class="empty">🔒<br>Login dulu untuk melihat file tersimpan.</div>';$('#count').textContent='';return}
+  L.innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  try{
+    const all0=await getDocs(query(collection(db,'files'),where('owner','==',auth.currentUser.uid)));
+    const ts=d=>d.data().createdAt?.toMillis?.()??Date.now();
+    const all={docs:all0.docs.slice().sort((x,y)=>ts(y)-ts(x))};
+    // bersihkan file yang sudah lewat masa simpan 7 hari
+    const now=Date.now(),expired=all.docs.filter(d=>{const e=d.data().expireAt;return e&&e.toMillis()<=now});
+    for(const d of expired){try{await deleteFileDoc(d.id)}catch{}}
+    if(expired.length)toast(`${expired.length} file kedaluwarsa dihapus otomatis 🧹`);
+    const docs=all.docs.filter(d=>!expired.includes(d));
+    $('#count').textContent=docs.length+' file milikmu';
+    if(!docs.length){L.innerHTML='<div class="empty">🫥<br>Kamu belum menyimpan file.</div>';return}
+    L.innerHTML='';
+    docs.forEach((d,i)=>{
+      const f=d.data(),el=document.createElement('div');
+      el.className='item';el.style.animationDelay=(i*.06)+'s';
+      const when=f.createdAt?.toDate?f.createdAt.toDate().toLocaleString('id-ID'):'';
+      let exp='';
+      if(f.expireAt){
+        const ms=f.expireAt.toMillis(),days=Math.max(0,Math.ceil((ms-now)/864e5));
+        exp=`<div class="dt" style="color:${days<=1?'var(--bad)':'#ffb347'}">⏳ Dihapus otomatis ${fmtDay(ms)} · sisa ${days} hari</div>`;
+      }else exp='<div class="dt">♾️ Permanen</div>';
+      el.innerHTML=`<div class="ic">${f.enc?'🔒':icon(f.mime)}</div>
+        <div class="info"><div class="nm"></div><div class="dt">${fmt(f.size)} · ${f.mime} · ${f.enc?'dilindungi password · ':'tanpa password · '}${when}</div>${exp}</div>
+        <div class="acts"><button class="mini" data-a="view">👁 Preview</button><button class="mini" data-a="dl">⬇️ File</button><button class="mini" data-a="copy">📋 Base64</button><button class="mini del" data-a="del">🗑 Hapus</button></div>`;
+      el.querySelector('.nm').textContent=f.name;
+      el.querySelector('.acts').onclick=e=>{const a=e.target.closest('button')?.dataset.a;if(a)itemAction(a,d.id,f,el,e.target.closest('button'))};
+      L.appendChild(el);
+    });
+  }catch(e){L.innerHTML=`<div class="empty">⚠️<br>${e.code||e.message}<br><span class="sub">Cek Firestore Rules &amp; config.</span></div>`}
+}
+async function itemAction(a,id,f,el,btn){
+  const old=btn.textContent;
+  // file terenkripsi: password WAJIB untuk setiap aksi (tanpa cache)
+  let key=null;
+  if(f.enc){
+    const hints={view:'Masukkan password untuk melihat file.',dl:'Masukkan password untuk mengunduh file.',copy:'Masukkan password untuk menyalin base64.',del:'Masukkan password untuk menghapus file.'};
+    const pw=await askPassword({title:`🔒 Password untuk "${f.name}"`,hint:hints[a]||''});
+    if(pw==null)return;
+    btn.textContent='⏳';
+    key=await verifyPw(f,pw);
+    btn.textContent=old;
+    if(!key){toast('Password salah ❌','err');return}
+  }
+  if(a==='del'){
+    if(!await askConfirm({title:'Hapus file?',msg:`"${f.name}" akan dihapus permanen dari Firebase.\nTindakan ini tidak bisa dibatalkan.`,ok:'🗑 Ya, hapus',icon:'🗑️'}))return;
+    btn.textContent='⏳';
+    try{
+      await deleteFileDoc(id); // sudah diverifikasi kosong di server
+      toast('Dihapus dari Firebase 🗑');
+    }catch(e){toast('Gagal hapus: '+(e.code==='permission-denied'?'Firestore Rules menolak izin delete':(e.code||e.message)),'err')}
+    btn.textContent=old;
+    loadList(); // muat ulang dari server supaya tampilan = kondisi sebenarnya
+    return;
+  }
+  btn.textContent='⏳';
+  try{
+    const raw=await fetchB64(id,f.chunks);
+    const blob=f.enc?await decryptToBlob(f,key,raw):await b64ToBlob(raw,f.mime);
+    if(a==='copy'){
+      const plain=f.enc?await blobToB64(blob):raw;
+      await navigator.clipboard.writeText(plain);toast('Base64 disalin ✨');
+    }
+    if(a==='dl'){download(blob,f.name);toast('File di-download 🎉')}
+    if(a==='view'){
+      pvState={blob,name:f.name,f};$('#pvTitle').textContent=f.name;
+      $('#pvZoom').value=100;$('#pvZoom').oninput();
+      $('#mPrev').classList.add('show');
+      pvState.url=await renderPreview($('#pvBody'),blob,f.mime,f.name);
+    }
+  }catch(e){toast('Gagal: '+(e.name==='OperationError'?'data tidak bisa didekripsi':(e.code||e.message)),'err')}
+  btn.textContent=old;
+}
+const closePv=()=>{$('#mPrev').classList.remove('show');$('#pvBody').innerHTML='';if(pvState?.url)URL.revokeObjectURL(pvState.url);pvState=null};
+$('#refresh').onclick=loadList;
+$('#pvClose').onclick=closePv;
+$('#pvDl').onclick=async()=>{
+  if(!pvState)return;
+  const st=pvState;
+  if(st.f.enc){ // tombol download di preview juga wajib password
+    const pw=await askPassword({title:`🔒 Password untuk "${st.f.name}"`,hint:'Masukkan password untuk mengunduh file.'});
+    if(pw==null)return;
+    if(!await verifyPw(st.f,pw)){toast('Password salah ❌','err');return}
+  }
+  download(st.blob,st.name);toast('File di-download 🎉');
+};
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m&&m.id!=='mLogin'&&m.id!=='mPass'&&m.id!=='mCfm'){m.id==='mPrev'?closePv():m.classList.remove('show')}}));
+
+const LOGOS={
+  swap:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#lgA)"/><g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 24H47M39 15l9 9-9 9"/><path d="M49 42H17M25 33l-9 9 9 9"/></g></svg>`,
+  hex:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><path d="M32 3l25 14.5v29L32 61 7 46.5v-29z" fill="url(#lgA)"/><path d="M32 10l19 11v22L32 54 13 43V21z" fill="none" stroke="#fff" stroke-opacity=".35" stroke-width="1.5"/><text x="32" y="40.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="24" fill="#fff">64</text></svg>`,
+  file:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="lgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="url(#lgA)"/><path d="M19 11h19l9 9v31a3 3 0 0 1-3 3H19a3 3 0 0 1-3-3V14a3 3 0 0 1 3-3z" fill="#fff"/><path d="M38 11l9 9h-9z" fill="#c9d3ff"/><text x="31.5" y="43" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="15" fill="#5b6cff">64</text></svg>`,
+  bits:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="lgA" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64"><stop offset="0" stop-color="#7c5cff"/><stop offset="1" stop-color="#00d4ff"/></linearGradient></defs><rect width="64" height="64" rx="16" fill="#12122a"/><rect x="1.5" y="1.5" width="61" height="61" rx="14.5" fill="none" stroke="url(#lgA)" stroke-width="3"/><g fill="url(#lgA)"><rect x="14" y="14" width="10" height="10" rx="3"/><rect x="27" y="14" width="10" height="10" rx="3" opacity=".25"/><rect x="40" y="14" width="10" height="10" rx="3"/><rect x="14" y="27" width="10" height="10" rx="3" opacity=".25"/><rect x="27" y="27" width="10" height="10" rx="3"/><rect x="40" y="27" width="10" height="10" rx="3"/><rect x="14" y="40" width="10" height="10" rx="3"/><rect x="27" y="40" width="10" height="10" rx="3"/><rect x="40" y="40" width="10" height="10" rx="3" opacity=".25"/></g></svg>`
+};
+const LOGO='swap'; // ganti ke: swap | hex | file | bits
+(function(){
+  const svg=LOGOS[LOGO]||LOGOS.swap;
+  $('#logoMark').innerHTML=svg;
+  const l=document.createElement('link');l.rel='icon';l.type='image/svg+xml';
+  l.href='data:image/svg+xml,'+encodeURIComponent(svg);document.head.appendChild(l);
+})();
+
+/* ---------- Pengaturan admin: ukuran maksimum upload ---------- */
+const HARD_MAX_MB=100;
+function applyMax(){const h=$('#maxHint');if(h)h.textContent=`Ukuran maksimum: ${+(maxBytes/1048576).toFixed(1)} MB per file`}
+async function loadSettings(){
+  try{
+    const s=await getDoc(doc(db,'settings','app'));
+    const mb=s.exists()?Number(s.data().maxMB):NaN;
+    if(mb>0)maxBytes=Math.min(mb,HARD_MAX_MB)*1048576;
+  }catch{}
+  applyMax();
+}
+$('#settingsBtn').onclick=()=>{$('#setMax').value=+(maxBytes/1048576).toFixed(1);$('#setErr').textContent='';$('#mSet').classList.add('show')};
+$('#setCancel').onclick=()=>$('#mSet').classList.remove('show');
+document.querySelectorAll('.presets .mini').forEach(b=>b.onclick=()=>{$('#setMax').value=b.dataset.mb});
+$('#setSave').onclick=async()=>{
+  if(!isAdmin())return;
+  const v=parseFloat($('#setMax').value);
+  if(!(v>=1&&v<=HARD_MAX_MB)){$('#setErr').textContent=`Isi angka antara 1 dan ${HARD_MAX_MB} MB`;return}
+  const b=$('#setSave');b.disabled=true;
+  try{
+    await setDoc(doc(db,'settings','app'),{maxMB:v,updatedAt:serverTimestamp(),updatedBy:auth.currentUser.email});
+    maxBytes=v*1048576;applyMax();$('#mSet').classList.remove('show');toast(`Ukuran maksimum diubah ke ${v} MB ✅`);
+  }catch(e){$('#setErr').textContent='Gagal menyimpan: '+(e.code==='permission-denied'?'Rules Firestore belum mengizinkan admin menulis ke "settings"':(e.code||e.message))}
+  b.disabled=false;
+};
+
+/* ---------- Tombol kembali ke atas ---------- */
+const toTop=$('#toTop');
+addEventListener('scroll',()=>toTop.classList.toggle('show',scrollY>300),{passive:true});
+toTop.onclick=()=>scrollTo({top:0,behavior:'smooth'});
+
+applyMax();
+updateInputState();
+</script>
+</body>
+</html>
